@@ -124,44 +124,32 @@ UNIX2DOS       ?= $(shell which unix2dos 2>/dev/null)
 UNIX2DOS_FLAGS ?= $(shell [ -n $(UNIX2DOS) ] && $(UNIX2DOS) -q --version 2>/dev/null && echo "-q" || echo "")
 
 ################################################################
-# Get the Repository revision, tags and the modified status
-# The displayed name within OpenTTD / TTDPatch
-# Looks like either
-# a nightly build:                 GRF's Name nightly-r51
-# a release build (taged version): GRF's Name 0.1
+#
+# Working copy / bundle version detection.
+#
 ################################################################
-# This must be conditional declarations, or building from the tar.gz won't work anymore
-DEFAULT_BRANCH_NAME ?= $(shell echo "master")
 
-# Git hash
-REPO_HASH            ?= $(shell $(GIT) log -n1 --pretty="format:%h")
+# Always run version detection, so we always have an accurate modified
+# flag
+REPO_VERSIONS := $(shell AWK="$(AWK)" "./findversion.sh")
+REPO_MODIFIED := $(shell echo "$(REPO_VERSIONS)" | cut -f 3 -d'	')
 
-# Git hash again (same as REPO_HASH, Git has no revisions)
-REPO_REVISION        ?= $(REPO_HASH)
+# Use autodetected revisions
+REPO_VERSION := $(shell echo "$(REPO_VERSIONS)" | cut -f 1 -d'	')
+REPO_DATE := $(shell echo "$(REPO_VERSIONS)" | cut -f 2 -d'	')
+REPO_HASH := $(shell echo "$(REPO_VERSIONS)" | cut -f 4 -d'	')
 
-# Days of commit since 2000-1-1 00-00
-REPO_DATE            ?= $(shell $(GIT) log -n1 --pretty="format:%cs")
-REPO_DATE_COMMAS     ?= $(shell echo "$(REPO_DATE)" | sed s/-/,/g | sed s/,0/,/g)
-REPO_DAYS_SINCE_2000 ?= $(shell $(PYTHON) -c "from datetime import date; print ( (date($(REPO_DATE_COMMAS)) - date(2000,1,1)).days)")
-
-TEMP_GITSTATUS ?= $(shell $(GIT) status --porcelain=v2 | grep "^[12]")
-# Whether there are local changes ("M" if modified, "" if not)
-REPO_MODIFIED  ?= $(shell [ -z "$TEMP_GITSTATUS" ] && echo "" || echo "M")
-
-# Branch name
-REPO_BRANCH    ?= $(shell $(GIT) status -b --porcelain=v2 | grep "^# branch\.head" | tail -c7)
-
-# Filename addition, if we're not building the default branch
-REPO_BRANCH_STRING ?= $(shell if [ "$(REPO_BRANCH)" = "$(DEFAULT_BRANCH_NAME)" ]; then echo ""; else echo "-$(REPO_BRANCH)"; fi)
+# Days of commit since 2000-01-01. REPO_DATE is in format YYYYMMDD.
+REPO_DATE_YEAR := $(shell echo "${REPO_DATE}" | cut -b1-4)
+REPO_DATE_MONTH := $(shell echo "${REPO_DATE}" | cut -b5-6 | sed s/^0//)
+REPO_DATE_DAY := $(shell echo "${REPO_DATE}" | cut -b7-8 | sed s/^0//)
+REPO_DAYS_SINCE_2000 := $(shell $(PYTHON) -c "from datetime import date; print( (date($(REPO_DATE_YEAR),$(REPO_DATE_MONTH),$(REPO_DATE_DAY))-date(2000,1,1)).days)")
 
 # The version reported to OpenTTD. Usually days since 2000 + branch offset
-NEWGRF_VERSION ?= $(shell let x="$(REPO_DAYS_SINCE_2000) + 65536 * $(REPO_BRANCH_VERSION)"; echo "$$x")
-
-# The shown version is either a tag, or in the absence of a tag the revision.
-REPO_VERSION_STRING ?= $(shell echo $(REPO_DATE)$(REPO_BRANCH_STRING) \($(NEWGRF_VERSION):$(REPO_HASH)$(REPO_MODIFIED)\))
+NEWGRF_VERSION := $(shell let x="$(REPO_DAYS_SINCE_2000) + 65536 * $(REPO_BRANCH_VERSION)"; echo "$$x")
 
 # The title consists of name and version
-REPO_TITLE     ?= $(REPO_NAME) $(REPO_VERSION_STRING)
+REPO_TITLE     := $(REPO_NAME) $(REPO_VERSION)
 
 # Remove the @ when you want a more verbose output.
 _V ?= @
