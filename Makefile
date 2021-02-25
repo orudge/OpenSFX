@@ -132,7 +132,6 @@ UNIX2DOS_FLAGS ?= $(shell [ -n $(UNIX2DOS) ] && $(UNIX2DOS) -q --version 1>&2 2>
 # Always run version detection, so we always have an accurate modified
 # flag
 REPO_VERSIONS := $(shell AWK="$(AWK)" "./findversion.sh")
-REPO_MODIFIED := $(shell echo "$(REPO_VERSIONS)" | cut -f 3 -d'	')
 
 # Use autodetected revisions
 REPO_VERSION := $(shell echo "$(REPO_VERSIONS)" | cut -f 1 -d'	')
@@ -145,11 +144,16 @@ REPO_DATE_MONTH := $(shell echo "${REPO_DATE}" | cut -b5-6 | sed s/^0//)
 REPO_DATE_DAY := $(shell echo "${REPO_DATE}" | cut -b7-8 | sed s/^0//)
 REPO_DAYS_SINCE_2000 := $(shell $(PYTHON) -c "from datetime import date; print( (date($(REPO_DATE_YEAR),$(REPO_DATE_MONTH),$(REPO_DATE_DAY))-date(2000,1,1)).days)")
 
+REPO_TAGS      ?= $(REPO_VERSION)
+
 # The version reported to OpenTTD. Usually days since 2000 + branch offset
 NEWGRF_VERSION := $(shell let x="$(REPO_DAYS_SINCE_2000) + 65536 * $(REPO_BRANCH_VERSION)"; echo "$$x")
 
+# The shown version is either a tag, or in the absence of a tag the revision.
+REPO_VERSION_STRING ?= $(shell [ -n "$(REPO_TAGS)" ] && echo $(REPO_TAGS) || echo $(REPO_DATE)$(REPO_BRANCH_STRING) \($(NEWGRF_VERSION):$(REPO_HASH)\))
+
 # The title consists of name and version
-REPO_TITLE     := $(REPO_NAME) $(REPO_VERSION)
+REPO_TITLE     ?= $(REPO_NAME) $(REPO_VERSION_STRING)
 
 # Remove the @ when you want a more verbose output.
 _V ?= @
@@ -336,8 +340,8 @@ GRFID_FLAGS    ?= -m
 # followed by an M, if the source repository is not a clean version.
 
 # Common to all filenames
-FILE_VERSION_STRING ?= $(shell echo "$(REPO_BRANCH_STRING)$(NEWGRF_VERSION)$(REPO_MODIFIED)")
-DIR_NAME           := $(shell echo $(BASE_FILENAME))
+FILE_VERSION_STRING ?= $(shell [ -n "$(REPO_TAGS)" ] && echo "$(REPO_TAGS)" || echo "$(REPO_BRANCH_STRING)$(NEWGRF_VERSION)")
+DIR_NAME           := $(shell [ -n "$(REPO_TAGS)" ] && echo $(BASE_FILENAME)-$(FILE_VERSION_STRING) || echo $(BASE_FILENAME))
 VERSIONED_FILENAME := $(BASE_FILENAME)-$(FILE_VERSION_STRING)
 DIR_NAME_SRC       := $(VERSIONED_FILENAME)-source
 
@@ -429,7 +433,6 @@ Makefile.fordist:
 	$(_V) echo 'REPO_TITLE := $(REPO_TITLE)' >> $@
 	$(_V) echo 'REPO_DATE := $(REPO_DATE)' >> $@
 	$(_V) echo 'REPO_BRANCH := $(REPO_BRANCH)' >> $@
-	$(_V) echo 'REPO_MODIFIED := $(REPO_MODIFIED)' >> $@
 	$(_V) echo 'GIT := :' >> $@
 	$(_V) echo 'PYTHON := :' >> $@
 
