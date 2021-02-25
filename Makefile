@@ -406,7 +406,7 @@ check: $(MD5_FILENAME)
 
 $(DIR_NAME_SRC).tar: $(DIR_NAME_SRC)
 	$(_E) "[BUNDLE SRC]"
-	$(_V) $(GIT) archive --format=tar $<.tar
+	$(_V) $(GIT) archive --format=tar HEAD > $<.tar
 	$(_V) $(TAR) -uf $@ $^
 
 bundle_src: $(DIR_NAME_SRC).tar
