@@ -98,7 +98,7 @@ jobs:
         # Move bundles in their own folder
         mkdir bundles
         mv opensfx-${{ steps.vars.outputs.version }}-source.tar.xz bundles/
-        mv opensfx-${{ steps.vars.outputs.version }}-all.zip bundles/
+        mv opensfx-${{ steps.vars.outputs.version }}.zip bundles/opensfx-${{ steps.vars.outputs.version }}-all.zip
 
     - if: steps.vars.outputs.skip == 'false'
       name: Create checksums
